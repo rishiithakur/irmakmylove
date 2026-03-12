@@ -1251,11 +1251,13 @@ dropZ.addEventListener('dragleave', () => dropZ.classList.remove('drag-over'));
 dropZ.addEventListener('drop', e => { e.preventDefault(); dropZ.classList.remove('drag-over'); handleFiles(e.dataTransfer.files); });
 
 updateNav();
+renderColl();
+  
 </script>
 </body>
 </html>
-updateNav();
-renderColl();
+
+
 
 
 
