@@ -9,8 +9,20 @@
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{width:100%;height:100%;overflow:hidden;background:#000;}
 body{font-family:'Cormorant Garamond',serif;color:#fff;}
-
-//* ══ CINEMATIC BARS ══ *//
+#voiceToggle{
+position:fixed;
+top:20px;
+right:20px;
+z-index:99999;
+background:rgba(0,0,0,0.6);
+border:none;
+color:white;
+font-size:22px;
+padding:10px;
+border-radius:50%;
+cursor:pointer;
+}
+/* ══ CINEMATIC BARS ══ */
 #cinema-bars{position:fixed;inset:0;z-index:99999;pointer-events:none;}
 .bar-top,.bar-bot{
   position:absolute;left:0;right:0;height:12vh;
@@ -404,7 +416,17 @@ border:1px solid rgba(255,255,255,.1);
 transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s;
 }
 .coll-cell:hover{transform:scale(1.06) rotate(1deg);z-index:5;box-shadow:0 16px 40px rgba(0,0,0,.6);}
-.coll-cell img{width:100%;height:100%;object-fit:cover;display:block;}
+.coll-cell img{
+width:100%;
+height:100%;
+object-fit:cover;
+display:block;
+}
+
+.coll-cell:first-child{
+grid-column:span 2;
+grid-row:span 2;
+}
 .coll-rm{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.7);border:none;border-radius:50%;width:22px;height:22px;color:white;cursor:pointer;font-size:.7rem;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;}
 .coll-cell:hover .coll-rm{opacity:1;}
 .coll-hint{text-align:center;font-style:italic;color:rgba(255,255,255,.4);font-size:.88rem;margin-top:1rem;}
@@ -462,7 +484,7 @@ transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s;
 
 <!-- VOICE SUBTITLE -->
 <div id="voice-sub"></div>
-
+<button id="voiceToggle">🔊</button>
 <!-- ══════════ INTRO ══════════ -->
 <div id="intro">
   <canvas id="intro-canvas"></canvas>
@@ -785,6 +807,56 @@ transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s;
 /* ════════════════════════════════════════════
    VOICE NARRATION
 ════════════════════════════════════════════ */
+let voiceEnabled = true;
+
+document.getElementById("voiceToggle").onclick = () => {
+
+voiceEnabled = !voiceEnabled;
+
+document.getElementById("voiceToggle").textContent =
+voiceEnabled ? "🔊" : "🔇";
+
+if(!voiceEnabled){
+speechSynthesis.cancel();
+}
+
+};
+
+ async function speakPageText(page){
+
+if(!voiceEnabled) return;
+
+speechSynthesis.cancel();
+
+const pageEl = document.getElementById("page-"+page);
+
+if(!pageEl) return;
+
+const text = pageEl.innerText;
+
+const msg = new SpeechSynthesisUtterance(text);
+
+msg.rate = 0.85;
+msg.pitch = 1.05;
+msg.volume = 1;
+
+const voices = speechSynthesis.getVoices().length
+? speechSynthesis.getVoices()
+: await new Promise(resolve=>{
+speechSynthesis.onvoiceschanged=()=>resolve(speechSynthesis.getVoices())
+});
+
+const british = voices.find(v =>
+v.name.includes("Google UK English") ||
+v.name.includes("Daniel") ||
+v.name.includes("Serena")
+);
+
+if(british) msg.voice = british;
+
+speechSynthesis.speak(msg);
+
+}
 const VOICE_LINES = [
   { text: "Hello, Mom...", delay: 400 },
   { text: "Hello, Dad...", delay: 1800 },
@@ -795,7 +867,7 @@ const VOICE_LINES = [
   { text: "Please open your heart — this is for you.", delay: 9000 },
 ];
 
-let voiceEnabled = false;
+
 const voiceSub = document.getElementById('voice-sub');
 
 function speak(text) {
@@ -951,7 +1023,7 @@ document.getElementById('skip-intro').addEventListener('click', endIntro);
 // Voice — request on first interaction (browser policy)
 document.getElementById('skip-intro').addEventListener('click', () => { voiceEnabled = false; }, { once: true });
 document.getElementById('intro').addEventListener('click', () => {
-  if (!voiceEnabled) { voiceEnabled = true; scheduleVoice(); }
+  scheduleVoice();
 }, { once: true });
 
 // Also try to kick off voices list load
@@ -1135,22 +1207,25 @@ function getPageEl(n) {
 
 function goTo(next) {
 
-  if (next === curPage || next < 1 || next >= TOTAL) return;
+  if (next < 0 || next >= TOTAL) return;
 
   const dir = next > curPage ? 'up' : 'down';
+
   const oldEl = getPageEl(curPage);
   const newEl = getPageEl(next);
 
   if (oldEl) {
     oldEl.classList.remove('active');
     oldEl.classList.add(dir === 'up' ? 'out-up' : 'out-down');
-    setTimeout(() => oldEl.classList.remove('out-up', 'out-down'), 800);
+    setTimeout(() => oldEl.classList.remove('out-up','out-down'),800);
   }
 
   newEl.scrollTop = 0;
   newEl.classList.add('active');
 
   curPage = next;
+
+  speakPageText(next);
 
   if(next === 10){
     renderColl();
@@ -1290,6 +1365,7 @@ renderColl();
 </script>
 </body>
 </html>
+
 
 
 
